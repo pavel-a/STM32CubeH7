@@ -1,0 +1,22 @@
+Branch: H7_V1.5.0
+Wrong HSI calibration default. causes unstable or out of spec clocks when HSI
+https://bit.ly/2OxCxFx 
+Value depends on stepping? 0x40 is good for H7 stepping V
+
+--- aaa/STM32CubeH7/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h	2019-11-20 16:01:17.000000000 +0200
++++ bbb/STM32CubeH7/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h	2019-11-20 16:11:40.000000000 +0200
+@@ -202,13 +202,13 @@
+ #define RCC_HSI_DIV2                     (RCC_CR_HSIDIV_2 | RCC_CR_HSION) /*!< HSI_DIV2 clock activation */
+ #define RCC_HSI_DIV4                     (RCC_CR_HSIDIV_4 | RCC_CR_HSION) /*!< HSI_DIV4 clock activation */
+ #define RCC_HSI_DIV8                     (RCC_CR_HSIDIV | RCC_CR_HSION)   /*!< HSI_DIV8 clock activation */
+ 
+ 
+ 
+-#define RCC_HSICALIBRATION_DEFAULT     (0x20U)         /* Default HSI calibration trimming value */
++#define RCC_HSICALIBRATION_DEFAULT     (0x40U)         /* Default HSI calibration trimming value */
+ /**
+   * @}
+   */
+ 
+ /** @defgroup RCC_HSI48_Config  RCC HSI48 Config
+   * @{

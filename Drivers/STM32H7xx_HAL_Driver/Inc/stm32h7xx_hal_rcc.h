@@ -205,7 +205,7 @@ typedef struct
 
 
 
-#define RCC_HSICALIBRATION_DEFAULT     (0x20U)         /* Default HSI calibration trimming value */
+#define RCC_HSICALIBRATION_DEFAULT     (0x40U)         /* Default HSI calibration trimming value */ /*pa01 https://bit.ly/2OxCxFx */
 /**
   * @}
   */
