@@ -1,0 +1,22 @@
+Branch H7_V1.5.0
+Error in ETH_DMARxDescListInit
+https://bit.ly/345He04
+
+--- aaa/STM32CubeH7/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth.c	2019-11-20 16:22:02.000000000 +0200
++++ bbb/STM32CubeH7/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth.c	2019-11-20 16:21:46.000000000 +0200
+@@ -2698,13 +2698,13 @@
+   WRITE_REG(heth->Instance->DMACRDRLR, ((uint32_t)(ETH_RX_DESC_CNT - 1)));
+ 
+   /* Set Receive Descriptor List Address */
+   WRITE_REG(heth->Instance->DMACRDLAR, (uint32_t) heth->Init.RxDesc);
+ 
+   /* Set Receive Descriptor Tail pointer Address */
+-  WRITE_REG(heth->Instance->DMACRDTPR, ((uint32_t)(heth->Init.RxDesc + (((uint32_t)(ETH_RX_DESC_CNT - 1))*sizeof(ETH_DMADescTypeDef)))));
++  WRITE_REG(heth->Instance->DMACRDTPR, (uint32_t)(heth->Init.RxDesc) + ((uint32_t)(ETH_RX_DESC_CNT - 1))*sizeof(ETH_DMADescTypeDef));
+ }
+ 
+ /**
+   * @brief  Prepare Tx DMA descriptor before transmission.
+   *         called by HAL_ETH_Transmit_IT and HAL_ETH_Transmit_IT() API.
+   * @param  heth: pointer to a ETH_HandleTypeDef structure that contains
+
