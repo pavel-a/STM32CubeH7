@@ -1,4 +1,4 @@
-/**
+/** patch H.
   ******************************************************************************
   * @file    stm32h7xx_hal_eth.h
   * @author  MCD Application Team
@@ -25,6 +25,7 @@
  extern "C" {
 #endif
 
+#if defined(ETH)
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal_def.h"
 
@@ -142,13 +143,49 @@ typedef struct
   * 
   */
 
-/** 
+/**
+ * @brief  Additional descriptor informations;
+ */
+typedef struct
+{
+  uint32_t FrstDescAddress;     /*<! First Rx DMA descriptor of received packet. */
+
+  uint32_t DescNbr;         /*<! Number of descriptors of last received packet */
+
+  uint32_t  DescIdx;          /*<! First descriptor position in descriptor list */
+
+  uint32_t  ContextDesc;        /*<! If 1 a context descriptor is present in last received packet.
+                                             If 0 no context descriptor is present in last received packet. */
+
+  uint32_t  ItMode;         /*<! If 1, DMA will generate the Rx complete interrupt.
+                                             If 0, DMA will not generate the Rx complete interrupt. */
+
+}ETH_AddDescriptorInfo;
+
+/**
+ * @brief  Rx Descriptor list control information ;
+ */
+typedef struct
+{
+  uint32_t TotalDescNbr;      /*<! Number of descriptor which needs to be initialized in App */
+
+  uint32_t FrstRecDesc;   /*<! Position of the first received descriptor in descriptor list*/
+
+  uint32_t LstRecDesc;    /*<! Position of the last received descriptor in descriptor list*/
+
+}ETH_AddControl;
+
+/**
  * @brief  DMA Receive Descriptors Wrapper structure definition
  */
 typedef struct
 {
-  uint32_t RxDesc[ETH_RX_DESC_CNT];     /*<! Rx DMA descriptors addresses. */
-  
+  uint32_t        RxDesc[ETH_RX_DESC_CNT];      /*<! Rx DMA descriptors addresses. */
+
+  ETH_AddDescriptorInfo DescInfo[ETH_RX_DESC_CNT];    /*<! Additional descriptor informations */
+
+  ETH_AddControl    Control;            /*<! Descriptor List Control information */
+
   uint32_t CurRxDesc;                   /*<! Current Rx descriptor, ready for next reception. */
   
   uint32_t FirstAppDesc;                /*<! First descriptor of last received packet. */
@@ -1666,6 +1703,8 @@ uint32_t             HAL_ETH_GetMACWakeUpSource(ETH_HandleTypeDef *heth);
   * @}
   */ 
   
+#endif /* ETH */
+
 #ifdef __cplusplus
 }
 #endif
