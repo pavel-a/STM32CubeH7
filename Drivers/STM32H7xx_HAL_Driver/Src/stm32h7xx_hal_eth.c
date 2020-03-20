@@ -1,4 +1,4 @@
-/**
+/** patch H.
   ******************************************************************************
   * @file    stm32h7xx_hal_eth.c
   * @author  MCD Application Team
@@ -200,14 +200,14 @@
   */
 /* Helper macros for TX descriptor handling */
 #define INCR_TX_DESC_INDEX(inx, offset) do {\
-	(inx) += (offset);\
+  (inx) += (offset);\
           if ((inx) >= (uint32_t)ETH_TX_DESC_CNT){\
             (inx) = ((inx) - (uint32_t)ETH_TX_DESC_CNT);}\
 } while (0)
 
 /* Helper macros for RX descriptor handling */
 #define INCR_RX_DESC_INDEX(inx, offset) do {\
-	(inx) += (offset);\
+  (inx) += (offset);\
           if ((inx) >= (uint32_t)ETH_RX_DESC_CNT){\
             (inx) = ((inx) - (uint32_t)ETH_RX_DESC_CNT);}\
 } while (0)
@@ -1057,7 +1057,6 @@ HAL_StatusTypeDef HAL_ETH_Transmit_IT(ETH_HandleTypeDef *heth, ETH_TxPacketConfi
     return HAL_ERROR;
   }
 }
-
 /**
   * @brief  Checks for received Packets.
   * @param  heth: pointer to a ETH_HandleTypeDef structure that contains
@@ -1069,16 +1068,33 @@ uint8_t HAL_ETH_IsRxDataAvailable(ETH_HandleTypeDef *heth)
 {
   ETH_RxDescListTypeDef *dmarxdesclist = &heth->RxDescList;
   uint32_t descidx = dmarxdesclist->CurRxDesc;
+  uint32_t mydescidx = 0;
   ETH_DMADescTypeDef *dmarxdesc = (ETH_DMADescTypeDef *)dmarxdesclist->RxDesc[descidx];
   uint32_t descscancnt = 0;
   uint32_t appdesccnt = 0, firstappdescidx = 0;
 
-  if(dmarxdesclist->AppDescNbr != 0U)
+
+  /*Check if RxDescriptor list is full*/
+  if(dmarxdesclist->Control.TotalDescNbr >= ETH_RX_DESC_CNT){
+    return 0;
+  }
+  /*Get index of descriptor in descriptor list in which data will be placed*/
+  if(dmarxdesclist->Control.TotalDescNbr==0)
   {
-    /* data already received by not yet processed*/
+      mydescidx = dmarxdesclist->Control.FrstRecDesc;
+  }
+  else
+  {
+      mydescidx = dmarxdesclist->Control.LstRecDesc;
+      INCR_RX_DESC_INDEX(mydescidx,1U);
+  }
+  /*Check if descriptor is available*/
+  if(dmarxdesclist->DescInfo[mydescidx].DescNbr!=0)
+  {
     return 0;
   }
 
+  /*In this loop it should receive all frames of one package*/
   /* Check if descriptor is not owned by DMA */
   while((READ_BIT(dmarxdesc->DESC3, ETH_DMARXNDESCWBF_OWN) == (uint32_t)RESET) && (descscancnt < (uint32_t)ETH_RX_DESC_CNT))
   {
@@ -1125,7 +1141,7 @@ uint8_t HAL_ETH_IsRxDataAvailable(ETH_HandleTypeDef *heth)
     {
       WRITE_REG(firstappdescidx, descidx);
       /* Increment the number of descriptors to be passed to the application */
-      appdesccnt = 1U;
+      appdesccnt += 1U;
 
       /* Increment current rx descriptor index */
       INCR_RX_DESC_INDEX(descidx, 1U);
@@ -1144,7 +1160,7 @@ uint8_t HAL_ETH_IsRxDataAvailable(ETH_HandleTypeDef *heth)
       dmarxdesc = (ETH_DMADescTypeDef *)dmarxdesclist->RxDesc[descidx];
     }
   }
-
+  /*If not all of the frames of the packet have been dropped, reject the data from all the frames received so far*/
   /* Build Descriptors if an incomplete Packet is received */
   if(appdesccnt > 0U)
   {
@@ -1199,6 +1215,7 @@ HAL_StatusTypeDef HAL_ETH_GetRxDataBuffer(ETH_HandleTypeDef *heth, ETH_BufferTyp
 {
   ETH_RxDescListTypeDef *dmarxdesclist = &heth->RxDescList;
   uint32_t descidx = dmarxdesclist->FirstAppDesc;
+  uint32_t mydescidx = 0;
   uint32_t index, accumulatedlen = 0, lastdesclen;
   __IO const ETH_DMADescTypeDef *dmarxdesc = (ETH_DMADescTypeDef *)dmarxdesclist->RxDesc[descidx];
   ETH_BufferTypeDef *rxbuff = RxBuffer;
@@ -1209,20 +1226,31 @@ HAL_StatusTypeDef HAL_ETH_GetRxDataBuffer(ETH_HandleTypeDef *heth, ETH_BufferTyp
     return HAL_ERROR;
   }
 
-  if(dmarxdesclist->AppDescNbr == 0U)
+  /*Haris: Check if the descriptor list ready to accept new descriptors*/
+  if(HAL_ETH_IsRxDataAvailable(heth) == 0U)
   {
-    if(HAL_ETH_IsRxDataAvailable(heth) == 0U)
-    {
       /* No data to be transferred to the application */
       return HAL_ERROR;
-    }
-    else
-    {
-      descidx = dmarxdesclist->FirstAppDesc;
-      dmarxdesc = (ETH_DMADescTypeDef *)dmarxdesclist->RxDesc[descidx];
-    }
-  }
+   }
+  descidx = dmarxdesclist->FirstAppDesc;
+  dmarxdesc = (ETH_DMADescTypeDef *)dmarxdesclist->RxDesc[descidx];
 
+  if(dmarxdesclist->Control.TotalDescNbr==0)
+  {
+    mydescidx = dmarxdesclist->Control.FrstRecDesc;
+  }
+  else
+  {
+    mydescidx = dmarxdesclist->Control.LstRecDesc;
+    INCR_RX_DESC_INDEX(mydescidx,1U);
+    WRITE_REG(dmarxdesclist->Control.LstRecDesc, mydescidx);
+  }
+  dmarxdesclist->DescInfo[mydescidx].FrstDescAddress=(uint32_t)dmarxdesc;
+  dmarxdesclist->DescInfo[mydescidx].DescNbr = dmarxdesclist->AppDescNbr;
+  dmarxdesclist->DescInfo[mydescidx].ContextDesc = dmarxdesclist->AppContextDesc;
+  dmarxdesclist->DescInfo[mydescidx].ItMode = dmarxdesclist->ItMode;
+  dmarxdesclist->DescInfo[mydescidx].DescIdx = dmarxdesclist->FirstAppDesc;
+  dmarxdesclist->Control.TotalDescNbr += dmarxdesclist->AppDescNbr;
   /* Get intermediate descriptors buffers: in case of the Packet is splitted into multi descriptors */
   for(index = 0; index < (dmarxdesclist->AppDescNbr - 1U); index++)
   {
@@ -1282,6 +1310,8 @@ HAL_StatusTypeDef HAL_ETH_GetRxDataBuffer(ETH_HandleTypeDef *heth, ETH_BufferTyp
     return HAL_ERROR;
   }
 
+  WRITE_REG(dmarxdesclist->AppDescNbr,0);
+  WRITE_REG(dmarxdesclist->AppContextDesc,0);
   return HAL_OK;
 }
 
@@ -1400,24 +1430,26 @@ HAL_StatusTypeDef HAL_ETH_GetRxDataInfo(ETH_HandleTypeDef *heth, ETH_RxPacketInf
 HAL_StatusTypeDef HAL_ETH_BuildRxDescriptors(ETH_HandleTypeDef *heth)
 {
   ETH_RxDescListTypeDef *dmarxdesclist = &heth->RxDescList;
-  uint32_t descindex = dmarxdesclist->FirstAppDesc;
+  uint32_t frstdescidx = dmarxdesclist->Control.FrstRecDesc;
+  uint32_t descindex = dmarxdesclist->DescInfo[frstdescidx].DescIdx;
   __IO ETH_DMADescTypeDef *dmarxdesc = (ETH_DMADescTypeDef *)dmarxdesclist->RxDesc[descindex];
-  uint32_t totalappdescnbr = dmarxdesclist->AppDescNbr;
+  uint32_t descnbr = dmarxdesclist->DescInfo[frstdescidx].DescNbr;
+  uint32_t contexdescriptor = dmarxdesclist->DescInfo[frstdescidx].ContextDesc;
   uint32_t descscan;
 
-  if(dmarxdesclist->AppDescNbr == 0U)
+  if(descnbr == 0U)
   {
     /* No Rx descriptors to build */
     return HAL_ERROR;
   }
 
-  if(dmarxdesclist->AppContextDesc != 0U)
+  if(contexdescriptor != 0U)
   {
     /* A context descriptor is available */
-    totalappdescnbr += 1U;
+    descnbr += 1U;
   }
 
-  for(descscan =0; descscan < totalappdescnbr; descscan++)
+  for(descscan =0; descscan < descnbr; descscan++)
   {
     WRITE_REG(dmarxdesc->DESC0, dmarxdesc->BackupAddr0);
     WRITE_REG(dmarxdesc->DESC3, ETH_DMARXNDESCRF_BUF1V);
@@ -1435,7 +1467,7 @@ HAL_StatusTypeDef HAL_ETH_BuildRxDescriptors(ETH_HandleTypeDef *heth)
       SET_BIT(dmarxdesc->DESC3, ETH_DMARXNDESCRF_IOC);
     }
 
-    if(descscan < (dmarxdesclist->AppDescNbr - 1U))
+    if(descscan < (descnbr - 1U))
     {
       /* Increment rx descriptor index */
       INCR_RX_DESC_INDEX(descindex, 1U);
@@ -1443,9 +1475,26 @@ HAL_StatusTypeDef HAL_ETH_BuildRxDescriptors(ETH_HandleTypeDef *heth)
       dmarxdesc = (ETH_DMADescTypeDef *)dmarxdesclist->RxDesc[descindex];
     }
   }
-
+  /*Checking if it really came to zero*/
+  /*See if for and following can be replaced with one while*/
+  descnbr-=(descscan);
+  if(descnbr!=0){
+      Error_Handler(); //while(1);
+  }
+  /*Write new desciptor number*/
+  WRITE_REG(dmarxdesclist->DescInfo[frstdescidx].DescNbr,descnbr);
+  WRITE_REG(dmarxdesclist->DescInfo[frstdescidx].ContextDesc,0);
+  WRITE_REG(dmarxdesclist->DescInfo[frstdescidx].FrstDescAddress,0);
+  WRITE_REG(dmarxdesclist->DescInfo[frstdescidx].DescIdx,0);
+  /*Decreasing the total number of descriptors*/
+  WRITE_REG(dmarxdesclist->Control.TotalDescNbr,dmarxdesclist->Control.TotalDescNbr-(descscan));
+  if(dmarxdesclist->Control.TotalDescNbr!=0){
+    INCR_RX_DESC_INDEX(dmarxdesclist->Control.FrstRecDesc,1U);
+  }
   /* Set the Tail pointer address to the last rx descriptor hold by the app */
-  WRITE_REG(heth->Instance->DMACRDTPR, (uint32_t)dmarxdesc);
+  if(dmarxdesclist->Control.TotalDescNbr == 0){
+    WRITE_REG(heth->Instance->DMACRDTPR, (uint32_t)dmarxdesc);
+  }
 
   /* reset the Application desc number */
   WRITE_REG(dmarxdesclist->AppDescNbr, 0);
@@ -2042,13 +2091,13 @@ void HAL_ETH_SetMDIOClockRange(ETH_HandleTypeDef *heth)
   /* Get the ETHERNET MACMDIOAR value */
   tmpreg = (heth->Instance)->MACMDIOAR;
 
-	/* Clear CSR Clock Range bits */
+  /* Clear CSR Clock Range bits */
   tmpreg &= ~ETH_MACMDIOAR_CR;
 
-	/* Get hclk frequency value */
+  /* Get hclk frequency value */
   hclk = HAL_RCC_GetHCLKFreq();
 
-	/* Set CR bits depending on hclk value */
+  /* Set CR bits depending on hclk value */
   if((hclk >= 20000000U)&&(hclk < 35000000U))
   {
     /* CSR Clock Range between 20-35 MHz */
@@ -2688,6 +2737,9 @@ static void ETH_DMARxDescListInit(ETH_HandleTypeDef *heth)
 
     /* Set Rx descritors adresses */
     WRITE_REG(heth->RxDescList.RxDesc[i], (uint32_t)dmarxdesc);
+    /*Added*/
+    WRITE_REG(heth->RxDescList.DescInfo[i].FrstDescAddress,0);
+    WRITE_REG(heth->RxDescList.DescInfo[i].DescNbr,0);
   }
 
   WRITE_REG(heth->RxDescList.CurRxDesc, 0);
@@ -2695,6 +2747,10 @@ static void ETH_DMARxDescListInit(ETH_HandleTypeDef *heth)
   WRITE_REG(heth->RxDescList.AppDescNbr, 0);
   WRITE_REG(heth->RxDescList.ItMode, 0);
   WRITE_REG(heth->RxDescList.AppContextDesc, 0);
+  /*Added*/
+  WRITE_REG(heth->RxDescList.Control.TotalDescNbr, 0);
+  WRITE_REG(heth->RxDescList.Control.FrstRecDesc, 0);
+  WRITE_REG(heth->RxDescList.Control.LstRecDesc, 0);
 
   /* Set Receive Descriptor Ring Length */
   WRITE_REG(heth->Instance->DMACRDRLR, ((uint32_t)(ETH_RX_DESC_CNT - 1)));
@@ -2982,14 +3038,12 @@ static void ETH_InitCallbacksToDefault(ETH_HandleTypeDef *heth)
 }
 #endif /* USE_HAL_ETH_REGISTER_CALLBACKS */
 
-
-/**
-  * @}
-  */
-
 #endif /* ETH */
 
 #endif /* HAL_ETH_MODULE_ENABLED */
+/**
+  * @}
+  */
 
 /**
   * @}
