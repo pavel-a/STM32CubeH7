@@ -1,6 +1,6 @@
 # STM32CubeH7 MCU Firmware Package
 
-Branch: H7_V1.6.0
+Branch: H7_V1.7.0
 Fork: pavel_a
 
 **STM32Cube** is an STMicroelectronics original initiative to ease the developers life by reducing efforts, time and cost.
