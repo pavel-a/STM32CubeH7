@@ -1,0 +1,31 @@
+From: pavel_a <pavel@aaa>
+Date: Thu, 25 Feb 2021 20:57:09 +0200
+Subject: [PATCH] BSP, stm32h743i_eval.c - fix for on-board LEDs
+ when i/o expander not used (all versions to 1.8.0)
+
+---
+ Drivers/BSP/STM32H743I-EVAL/stm32h743i_eval.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/Drivers/BSP/STM32H743I-EVAL/stm32h743i_eval.c b/Drivers/BSP/STM32H743I-EVAL/stm32h743i_eval.c
+index eb5a8c9b..6628ba70 100644
+--- a/Drivers/BSP/STM32H743I-EVAL/stm32h743i_eval.c
++++ b/Drivers/BSP/STM32H743I-EVAL/stm32h743i_eval.c
+@@ -99,10 +99,14 @@ static GPIO_TypeDef* LED_PORT[LEDn] = {
+ static const  uint32_t LED_PIN[LEDn] = {LED1_PIN,
+ #if (USE_BSP_IO_CLASS > 0)
+                                         LED2_PIN,
++#else
++                                        0,
+ #endif
+                                         LED3_PIN,
+ #if (USE_BSP_IO_CLASS > 0)
+                                         LED4_PIN
++#else
++                                        0,
+ #endif
+                                        };
+ 
+-- 
+2.25.1.windows.1
+
