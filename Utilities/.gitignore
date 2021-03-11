@@ -1,0 +1,4 @@
+# +pa01 remove big stuff
+/PC_Software/*
+/Media/*
+/Fonts/*
