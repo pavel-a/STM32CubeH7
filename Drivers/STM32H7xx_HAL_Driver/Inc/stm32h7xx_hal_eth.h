@@ -26,6 +26,9 @@
 #endif
 
 #if defined(ETH)
+
+#define STM32H7_ETH_TREGO_PATCH 1 /* Trego patch-by-H.-12-feb-2020 */
+
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal_def.h"
 

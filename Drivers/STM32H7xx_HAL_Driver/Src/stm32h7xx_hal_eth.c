@@ -153,6 +153,10 @@
 
 #if defined(ETH)
 
+#ifndef STM32H7_ETH_TREGO_PATCH 1 /* Trego patch-by-H.-12-feb-2020 */
+#error "mismatching stm32h7xx_hal_eth.h"
+#endif
+
 /** @defgroup ETH ETH
   * @brief ETH HAL module driver
   * @{
